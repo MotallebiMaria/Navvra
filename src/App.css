@@ -3,7 +3,7 @@
 }
 
 .App-header {
-  background-color: #282c34;
+  background: #1a1a1a;
   padding: 20px;
   color: white;
   min-height: 100vh;
@@ -14,22 +14,75 @@
 }
 
 .controls button {
-  background: #61dafb;
+  background: #3b82f6;
   border: none;
-  padding: 10px 20px;
+  padding: 12px 20px;
   margin: 5px;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
+  color: white;
+  transition: background 0.2s;
 }
 
-.controls button:hover {
-  background: #4fa8c5;
+.controls button:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.controls button:disabled {
+  background: #6b7280;
+  cursor: not-allowed;
 }
 
 .status {
   background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 10px;
+  margin-top: 20px;
+  text-align: left;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin: 15px 0;
+}
+
+.stat {
+  background: rgba(255, 255, 255, 0.05);
   padding: 15px;
   border-radius: 8px;
-  margin-top: 20px;
+  text-align: center;
+}
+
+.stat-number {
+  display: block;
+  font-size: 24px;
+  font-weight: bold;
+  color: #60a5fa;
+}
+
+.stat-label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.actions-preview {
+  margin-top: 15px;
+}
+
+.action-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 12px;
+  margin: 5px 0;
+  border-radius: 5px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.score {
+  color: #60a5fa;
+  font-weight: bold;
 }

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navvra Panel</title>
+    <style>
+        #navvra-panel {
+            position: fixed;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            width: 300px;
+            background: #1a1a1a;
+            color: white;
+            border-radius: 10px 0 0 10px;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .navvra-header {
+            background: #2563eb;
+            padding: 15px;
+            border-radius: 10px 0 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .navvra-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .navvra-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        
+        .navvra-content {
+            padding: 15px;
+        }
+        
+        .navvra-section {
+            margin-bottom: 20px;
+        }
+        
+        .navvra-section h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #60a5fa;
+        }
+        
+        .navvra-button {
+            width: 100%;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 14px;
+        }
+        
+        .navvra-button:hover {
+            background: #2563eb;
+        }
+        
+        .navvra-summary {
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .navvra-mode-selector {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            background: #374151;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .mode-btn.active {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div id="navvra-panel">
+        <div class="navvra-header">
+            <h3>🧭 Navvra Assistant</h3>
+            <button class="navvra-close" id="navvra-close">×</button>
+        </div>
+        
+        <div class="navvra-content">
+            <!-- mode selector -->
+            <div class="navvra-mode-selector">
+                <button class="mode-btn active" data-mode="focus">Focus</button>
+                <button class="mode-btn" data-mode="task">Task</button>
+                <button class="mode-btn" data-mode="content">Content</button>
+            </div>
+            
+            <!-- navigation section -->
+            <div class="navvra-section">
+                <h4>🧭 Navigation</h4>
+                <div id="navvra-navigation">
+                    <!-- navigation buttons injected here -->
+                </div>
+            </div>
+            
+            <!-- actions section -->
+            <div class="navvra-section">
+                <h4>🎯 Key Actions</h4>
+                <div id="navvra-actions">
+                    <!-- action buttons injected here -->
+                </div>
+            </div>
+            
+            <!-- content summary -->
+            <div class="navvra-section">
+                <h4>📝 Content Summary</h4>
+                <div class="navvra-summary" id="navvra-summary">
+                    Analyzing page content...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="injectedPanel.js"></script>
+</body>
+</html>
