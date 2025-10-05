@@ -15,48 +15,166 @@ function App() {
     console.log('Scanning current page...');
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
-      if (tabs[0]) {
-        console.log('Sending scan message to tab:', tabs[0].id);
+      
+      const sendScanMessage = () => {
         chrome.tabs.sendMessage(activeTab.id, { action: 'scanPage' }, (response) => {
-        console.log('Scan response:', response);
-        if (chrome.runtime.lastError) {
-            console.error('Error:', chrome.runtime.lastError);
-            setError('Content script not loaded on this page. Try refreshing the page.');
-          } else if (response && response.data) {
-            setPageData(response.data);
+          if (chrome.runtime.lastError) {
+            const errMsg = chrome.runtime.lastError.message || '';
+            console.log('Content script not ready:', chrome.runtime.lastError);
+
+            // if the receiving end doesnt exist, try to inject the content script and retry once
+            if (errMsg.includes('Receiving end does not exist')) {
+              console.log('Attempting to inject content script and retry scan...');
+              if (chrome.scripting && chrome.scripting.executeScript) {
+                chrome.scripting.executeScript({
+                  target: { tabId: activeTab.id },
+                  files: ['aiLoader.js', 'contentScript.js']
+                }, () => {
+                  if (chrome.runtime.lastError) {
+                    console.error('Failed to inject content script:', chrome.runtime.lastError);
+                    setPageData({ buttons: [], forms: 0, headings: [], inputs: 0, summary: 'Could not inject content script' });
+                    return;
+                  }
+
+                  // allow the content script a short time to initialize then retry
+                  setTimeout(() => {
+                    chrome.tabs.sendMessage(activeTab.id, { action: 'scanPage' }, (response2) => {
+                      if (chrome.runtime.lastError) {
+                        console.error('Scan retry failed:', chrome.runtime.lastError);
+                        setPageData({ buttons: [], forms: 0, headings: [], inputs: 0, summary: 'Scan retry failed' });
+                        return;
+                      }
+                      console.log('scanPage retry response received:', response2);
+                      if (response2 && response2.data) {
+                        const data = response2.data;
+                        data.buttons = data.buttons || [];
+                        data.links = data.links || [];
+                        data.headings = data.headings || [];
+                        data.forms = data.forms || 0;
+                        data.inputs = data.inputs || 0;
+                        data.summary = data.summary || '';
+                        setPageData(data);
+                      } else {
+                        setPageData({ buttons: [], forms: 0, headings: [], inputs: 0, links: [], summary: 'No page data received' });
+                      }
+                    });
+                  }, 500);
+                });
+                return;
+              } else {
+                console.warn('chrome.scripting not available in this environment');
+                setPageData({ buttons: [], forms: 0, headings: [], inputs: 0, summary: 'Please refresh the page and try again' });
+                return;
+              }
+            }
+
+            // other runtime errors: show fallback
+            setPageData({ 
+              buttons: [], 
+              forms: 0, 
+              headings: [], 
+              inputs: 0,
+              summary: "Please refresh the page and try again" 
+            });
+            return;
+          }
+
+          console.log('scanPage response received:', response);
+
+          if (response && response.data) {
+            // defensive: ensure arrays exist
+            const data = response.data;
+            data.buttons = data.buttons || [];
+            data.links = data.links || [];
+            data.headings = data.headings || [];
+            data.forms = data.forms || 0;
+            data.inputs = data.inputs || 0;
+            data.summary = data.summary || '';
+
+            setPageData(data);
           } else {
-            setError('No response from content script');
+            // handle case where response exists but no data
+            setPageData({ 
+              buttons: [], 
+              forms: 0, 
+              headings: [], 
+              inputs: 0,
+              links: [],
+              summary: "No page data received" 
+            });
           }
         });
-      } else {
-        setError('No active tab found');
-      }
+      };
+
+      sendScanMessage();
     });
   };
 
   const activatePanel = () => {
-    setError(null);
-    console.log('Activating panel...');
-    
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        console.log('Sending activate message to tab:', tabs[0].id);
-        
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'activatePanel' }, (response) => {
-          console.log('Activate response:', response);
-          if (chrome.runtime.lastError) {
-            console.error('Error:', chrome.runtime.lastError);
-            setError('Content script not loaded. Try refreshing the page.');
-          } else if (response && response.success) {
-            setIsActive(true);
-            // Close the popup after activation
-            setTimeout(() => window.close(), 500);
-          } else {
-            setError('Failed to activate panel');
-          }
-        });
-      }
+      const activeTab = tabs[0];
+
+      chrome.tabs.sendMessage(activeTab.id, { action: 'activatePanel' }, (response) => {
+        if (response && response.success) {
+          setIsActive(true);
+        }
+      });
     });
+  };
+
+  const clickElement = (elementId) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs[0];
+      
+      // send message to content script to click the actual element
+      chrome.tabs.sendMessage(activeTab.id, { 
+        action: 'clickElement',
+        elementId: elementId
+      }, (response) => {
+        if (response && response.success) {
+          console.log('Successfully clicked element:', elementId);
+          // close the popup after clicking
+          window.close();
+        }
+      });
+    });
+  };
+
+  // safe data access functions
+  const getButtons = () => {
+    return pageData?.buttons || [];
+  };
+
+  const getHeadings = () => {
+    return pageData?.headings || [];
+  };
+
+  const getFormsCount = () => {
+    return pageData?.forms || 0;
+  };
+
+  const getInputsCount = () => {
+    return pageData?.inputs || 0;
+  };
+
+  const getSummary = () => {
+    return pageData?.summary || "Analyzing page...";
+  };
+
+  // render summary as array of bullet points
+  const renderSummaryAsBullets = (summary) => {
+    if (!summary) return null;
+
+    // split into paragraphs/lines
+    const parts = summary.split(/\n\n|\n/).map(p => p.trim()).filter(p => p.length > 0);
+
+    return (
+      <ul className="summary-bullets">
+        {parts.map((part, idx) => (
+          <li key={idx} dangerouslySetInnerHTML={{ __html: part.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+        ))}
+      </ul>
+    );
   };
 
   return (
@@ -83,39 +201,61 @@ function App() {
           </button>
         </div>
 
-        {pageData && (
+        {pageData ? (
           <div className="status">
             <h3>📊 Page Analysis</h3>
             <div className="stats-grid">
               <div className="stat">
-                <span className="stat-number">{pageData.buttons.length}</span>
+                <span className="stat-number">{getButtons().length}</span>
                 <span className="stat-label">Key Actions</span>
               </div>
               <div className="stat">
-                <span className="stat-number">{pageData.forms}</span>
+                <span className="stat-number">{getFormsCount()}</span>
                 <span className="stat-label">Forms</span>
               </div>
               <div className="stat">
-                <span className="stat-number">{pageData.headings.length}</span>
+                <span className="stat-number">{getHeadings().length}</span>
                 <span className="stat-label">Headings</span>
               </div>
               <div className="stat">
-                <span className="stat-number">{pageData.inputs}</span>
+                <span className="stat-number">{getInputsCount()}</span>
                 <span className="stat-label">Inputs</span>
               </div>
             </div>
+
+            <div className="summary-section">
+              <h4>📝 Summary</h4>
+              <div className="summary-text">{renderSummaryAsBullets(getSummary())}</div>
+            </div>
             
-            {pageData.buttons && pageData.buttons.length > 0 && (
+            {getButtons().length > 0 ? (
               <div className="actions-preview">
                 <h4>🎯 Top Actions Found:</h4>
-                {pageData.buttons.slice(0, 3).map((btn, index) => (
-                  <div key={index} className="action-item">
-                    {btn.text || 'Unlabeled button'} 
-                    <span className="score">({btn.score})</span>
-                  </div>
+                {getButtons().slice(0, 5).map((btn, index) => (
+                  <button
+                    key={index}
+                    className="action-item navvra-action-btn"
+                    onClick={() => clickElement(btn.id)}
+                    title={`Click to trigger: ${btn.text}`}
+                    aria-label={`Trigger action: ${btn.text || 'Unlabeled button'}`}
+                  >
+                    <span className="action-text">{btn.text || 'Unlabeled button'}</span>
+                    <span className="score">({btn.score || 0})</span>
+                  </button>
                 ))}
               </div>
+            ) : (
+              <div className="no-actions">
+                <p>No interactive elements found on this page.</p>
+              </div>
             )}
+          </div>
+        ) : (
+          <div className="status">
+            <h3>📊 Page Analysis</h3>
+            <div className="loading">
+              <p>Scanning page...</p>
+            </div>
           </div>
         )}
       </header>
