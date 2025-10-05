@@ -20,5 +20,8 @@
       "resources": ["injectedPanel.html", "injectedPanel.js"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "icons": {
+    "1": "navvra-logo.png"
+  }
 }
