@@ -98,9 +98,17 @@ function updatePanelData(data) {
     // update summary with AI insights
     const summaryContainer = document.getElementById('navvra-summary');
     if (data.summary) {
+        const formattedSummary = data.summary
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n\n/g, '</div><div style="margin-top: 8px;">')
+            .replace(/\n/g, '<br>');
+        
         summaryContainer.innerHTML = `
-        <div style="margin-bottom: 8px;">${data.summary}</div>
-        ${data.classified ? '<div style="font-size: 12px; color: #60a5fa;">🤖 AI-Powered Analysis</div>' : ''}
+            <div style="font-size: 13px; line-height: 1.4;">
+            ${formattedSummary}
+            </div>
+            ${data.classified ? '<div style="margin-top: 8px; font-size: 11px; color: #60a5fa;">🤖 AI-Powered Analysis</div>' : 
+            '<div style="margin-top: 8px; font-size: 11px; color: #9ca3af;">🔧 Rule-Based Analysis</div>'}
         `;
     }
 }
