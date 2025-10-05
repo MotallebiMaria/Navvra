@@ -7,27 +7,33 @@
     <style>
         #navvra-panel {
             position: fixed;
-            top: 50%;
-            right: 0;
-            transform: translateY(-50%);
-            width: 300px;
+            left: 100px;
+            top: 100px;
+            width: 300px; /* Initial width */
+            height: 400px; /* Initial height - added for clarity for resizing */
+            min-width: 250px; /* Minimum width */
+            min-height: 200px; /* Minimum height */
             background: #1a1a1a;
             color: white;
-            border-radius: 10px 0 0 10px;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             z-index: 10000;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             max-height: 80vh;
-            overflow-y: auto;
+            /* overflow-y: auto; -- we might adjust this or handle content scrolling within */
+            overflow: hidden; /* Important: Hide scrollbars until content needs it */
+            cursor: default;
         }
-        
+
         .navvra-header {
             background: #2563eb;
             padding: 15px;
-            border-radius: 10px 0 0 0;
+            border-radius: 10px 10px 0 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: move;
+            user-select: none;
         }
         
         .navvra-header h3 {
@@ -41,10 +47,24 @@
             color: white;
             font-size: 18px;
             cursor: pointer;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .navvra-close:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
         
         .navvra-content {
             padding: 15px;
+            cursor: default;
+            /* Allow content to scroll if panel is resized smaller than content */
+            overflow-y: auto; 
+            max-height: calc(100% - 60px); /* Adjust based on header height, e.g., 60px for header */
         }
         
         .navvra-section {
@@ -102,40 +122,59 @@
         .mode-btn.active {
             background: #2563eb;
         }
+
+        /* Resize handle */
+        .resize-handle {
+            position: absolute;
+            bottom: 0; /* Changed to 0 */
+            right: 0;  /* Changed to 0 */
+            width: 16px; /* Slightly larger for easier grabbing */
+            height: 16px; /* Slightly larger */
+            background: linear-gradient(135deg, transparent 50%, #6b7280 50%);
+            cursor: nwse-resize;
+            z-index: 10001;
+        }
+
+        /* Dragging state */
+        .dragging {
+            cursor: grabbing !important;
+            user-select: none;
+        }
+        /* Resizing state */
+        .resizing {
+            cursor: nwse-resize !important;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
     <div id="navvra-panel">
-        <div class="navvra-header">
+        <div class="navvra-header" id="navvra-header">
             <h3>🧭 Navvra Assistant</h3>
             <button class="navvra-close" id="navvra-close">×</button>
         </div>
         
         <div class="navvra-content">
-            <!-- mode selector -->
             <div class="navvra-mode-selector">
                 <button class="mode-btn active" data-mode="focus">Focus</button>
                 <button class="mode-btn" data-mode="task">Task</button>
                 <button class="mode-btn" data-mode="content">Content</button>
             </div>
             
-            <!-- navigation section -->
             <div class="navvra-section">
                 <h4>🧭 Navigation</h4>
                 <div id="navvra-navigation">
-                    <!-- navigation buttons injected here -->
+                    <div style="color: #9ca3af; font-size: 12px; text-align: center;">Loading...</div>
                 </div>
             </div>
             
-            <!-- actions section -->
             <div class="navvra-section">
                 <h4>🎯 Key Actions</h4>
                 <div id="navvra-actions">
-                    <!-- action buttons injected here -->
+                    <div style="color: #9ca3af; font-size: 12px; text-align: center;">Loading...</div>
                 </div>
             </div>
             
-            <!-- content summary -->
             <div class="navvra-section">
                 <h4>📝 Content Summary</h4>
                 <div class="navvra-summary" id="navvra-summary">
@@ -143,8 +182,9 @@
                 </div>
             </div>
         </div>
+        
+        <div class="resize-handle" id="resize-handle"></div>
     </div>
 
-    <script src="injectedPanel.js"></script>
-</body>
+    </body>  
 </html>

@@ -4,32 +4,58 @@ import './App.css';
 function App() {
   const [pageData, setPageData] = useState(null);
   const [isActive, setIsActive] = useState(false);
-  
+  const [error, setError] = useState(null);
+
   useEffect(() => {
     scanCurrentPage();
   }, []);
 
   const scanCurrentPage = () => {
+    setError(null);
+    console.log('Scanning current page...');
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
-      
-      chrome.tabs.sendMessage(activeTab.id, { action: 'scanPage' }, (response) => {
-        if (response && response.data) {
-          setPageData(response.data);
-        }
-      });
+      if (tabs[0]) {
+        console.log('Sending scan message to tab:', tabs[0].id);
+        chrome.tabs.sendMessage(activeTab.id, { action: 'scanPage' }, (response) => {
+        console.log('Scan response:', response);
+        if (chrome.runtime.lastError) {
+            console.error('Error:', chrome.runtime.lastError);
+            setError('Content script not loaded on this page. Try refreshing the page.');
+          } else if (response && response.data) {
+            setPageData(response.data);
+          } else {
+            setError('No response from content script');
+          }
+        });
+      } else {
+        setError('No active tab found');
+      }
     });
   };
 
   const activatePanel = () => {
+    setError(null);
+    console.log('Activating panel...');
+    
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const activeTab = tabs[0];
-      
-      chrome.tabs.sendMessage(activeTab.id, { action: 'activatePanel' }, (response) => {
-        if (response && response.success) {
-          setIsActive(true);
-        }
-      });
+      if (tabs[0]) {
+        console.log('Sending activate message to tab:', tabs[0].id);
+        
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'activatePanel' }, (response) => {
+          console.log('Activate response:', response);
+          if (chrome.runtime.lastError) {
+            console.error('Error:', chrome.runtime.lastError);
+            setError('Content script not loaded. Try refreshing the page.');
+          } else if (response && response.success) {
+            setIsActive(true);
+            // Close the popup after activation
+            setTimeout(() => window.close(), 500);
+          } else {
+            setError('Failed to activate panel');
+          }
+        });
+      }
     });
   };
 
@@ -39,6 +65,15 @@ function App() {
         <h1>🧭 Navvra</h1>
         <p>AI-powered accessibility assistant</p>
         
+
+        {error && (
+          <div className="error-message">
+            ⚠️ {error}
+            <br />
+            <small>Try refreshing the page and try again</small>
+          </div>
+        )}
+
         <div className="controls">
           <button onClick={activatePanel} disabled={isActive}>
             {isActive ? 'Panel Active' : 'Activate Floating Panel'}
@@ -70,7 +105,7 @@ function App() {
               </div>
             </div>
             
-            {pageData.buttons.length > 0 && (
+            {pageData.buttons && pageData.buttons.length > 0 && (
               <div className="actions-preview">
                 <h4>🎯 Top Actions Found:</h4>
                 {pageData.buttons.slice(0, 3).map((btn, index) => (

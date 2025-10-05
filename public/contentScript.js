@@ -1,17 +1,21 @@
 // Content script that will be injected into every page
 console.log("Navvra content script loaded!");
-
 // TODO: This will eventually handle:
 // - DOM scanning and analysis
 // - Injecting the floating panel
 // - Communication with background scripts
 
-let isPanelnjected = false;
+let isPanelInjected = false;
 let currentPageData = {};
+
+// Simple drag and resize variables
+let isDragging = false;
+let isResizing = false;
 
 function injectFloatingPanel() {
   if (isPanelInjected) {
     console.log('Panel already injected');
+    return;
   }
 
   // make container for panel
@@ -26,12 +30,74 @@ function injectFloatingPanel() {
     isPanelInjected = true;
     console.log('Navvra panel injected successfully');
 
+    // Add simple drag, resize, and close functionality
+    setupPanelInteractions();
+    
     // scan page & update panel with initial data
     scanPageAndUpdatePanel();
   })
   .catch(error => {
     console.error('Failed to inject Navvra panel:', error);
   })
+}
+
+// Simple panel interactions
+function setupPanelInteractions() {
+  const panel = document.getElementById('navvra-panel');
+  const header = document.getElementById('navvra-header');
+  const closeBtn = document.getElementById('navvra-close');
+  const resizeHandle = document.getElementById('resize-handle');
+
+  if (!panel || !header) return;
+
+  // Close panel
+  closeBtn.addEventListener('click', () => {
+    panel.remove();
+    isPanelInjected = false;
+  });
+
+  // Simple dragging
+  header.addEventListener('mousedown', startDrag);
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup', stopDrag);
+
+  function startDrag(e) {
+    if (e.target.classList.contains('navvra-close')) return;
+    isDragging = true;
+  }
+
+  function onDragMove(e) {
+    if (!isDragging) return;
+    panel.style.left = e.clientX - 150 + 'px'; // Center panel on cursor
+    panel.style.top = e.clientY - 20 + 'px';
+  }
+
+  function stopDrag() {
+    isDragging = false;
+  }
+
+  // Simple resizing
+  if (resizeHandle) {
+    resizeHandle.addEventListener('mousedown', startResize);
+    
+    function startResize(e) {
+      isResizing = true;
+      document.addEventListener('mousemove', onResizeMove);
+      document.addEventListener('mouseup', stopResize);
+    }
+
+    function onResizeMove(e) {
+      if (!isResizing) return;
+      panel.style.width = Math.max(250, e.clientX - panel.offsetLeft) + 'px';
+      panel.style.height = Math.max(200, e.clientY - panel.offsetTop) + 'px';
+    }
+
+    function stopResize() {
+      isResizing = false;
+      document.removeEventListener('mousemove', onResizeMove);
+      document.removeEventListener('mouseup', stopResize);
+    }
+  }
 }
 
 // Basic DOM scanning for important elements
