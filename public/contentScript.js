@@ -1,13 +1,21 @@
 // Content script that will be injected into every page
 console.log("Navvra content script loaded!");
 
-// TODO: This will eventually handle:
-// - DOM scanning and analysis
-// - Injecting the floating panel
-// - Communication with background scripts
-
 let isPanelInjected = false;
 let currentPageData = {};
+let aiService = null;
+
+// load AI service pls work I'm begging you
+function loadAIService() {
+  if (typeof window.NavvraAIService !== 'undefined') {
+    aiService = window.NavvraAIService;
+    console.log('AI service loaded successfully');
+  } else {
+    console.log('AI service not available, using rule-based only');
+  }
+}
+
+loadAIService();
 
 // store mapping between our button IDs and actual DOM elements
 const elementMap = new Map();
@@ -38,137 +46,210 @@ function injectFloatingPanel() {
   })
 }
 
-// enhanced DOM scanning for important elements
-function scanImportantElements() {
-  const buttons = Array.from(document.querySelectorAll('button, [role="button"], input[type="submit"], input[type="button"], a.btn, a.button'));
-  const forms = Array.from(document.querySelectorAll('form'));
-  const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
-  const inputs = Array.from(document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], textarea'));
-  const links = Array.from(document.querySelectorAll('a[href]'));
+// enhanced DOM scanning WITH AI CLASSIFICATION for important elements
+async function scanImportantElements() {
+  try {
+    const buttons = Array.from(document.querySelectorAll('button, [role="button"], input[type="submit"], input[type="button"], a.btn, a.button'));
+    const forms = Array.from(document.querySelectorAll('form'));
+    const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+    const inputs = Array.from(document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], textarea, select'));
+    const links = Array.from(document.querySelectorAll('a[href]'));
+    const images = Array.from(document.querySelectorAll('img[alt], img[title]'));
 
-  // clear prev element map
-  elementMap.clear();
+    console.log(`Found ${buttons.length} buttons, ${headings.length} headings, ${links.length} links`);
 
-  // filter & based on text context
-  const importantButtons = buttons.map((el, index) => {
-    const text = el.textContent?.trim() || el.value || el.placeholder || el.title || '';
-    let score = 0;
-    
-    // score based on text content
-    if (/(login|signin|sign in|log in)/i.test(text)) score += 3;
-    if (/(submit|send|go|next|continue)/i.test(text)) score += 2;
-    if (/(buy|purchase|add to cart|checkout|order|pay)/i.test(text)) score += 4;
-    if (/(search|find)/i.test(text)) score += 1;
-    if (/(save|confirm|apply)/i.test(text)) score += 2;
-    if (/(download|get|start|try)/i.test(text)) score += 2;
-    
-    // score based on element type & attributes
-    if (el.tagName === 'BUTTON') score += 1;
-    if (el.getAttribute('type') === 'submit') score += 2;
-    if (el.offsetWidth > 100 && el.offsetHeight > 30) score += 1; // Larger buttons are more important
-    if (el.checkVisibility && el.checkVisibility()) score += 1; // visible elements are more important
+    // clear prev element map
+    elementMap.clear();
 
-    const buttonId = `navvra-btn-${Date.now()}-${index}`;
-    
-    // store actual DOM element in map
-    elementMap.set(buttonId, el);
+    // better button analysis
+    const buttonElements = buttons.map((el, index) => {
+      const text = el.textContent?.trim() || el.value || el.placeholder || el.title || el.getAttribute('aria-label') || '';
+      const buttonId = `navvra-btn-${Date.now()}-${index}`;
+      elementMap.set(buttonId, el);
 
-    return {
-      element: el,
-      text: text || 'Click Me',
-      id: buttonId,
-      score: score,
-      tagName: el.tagName,
-      type: el.type || 'button'
+      return {
+        element: el,
+        text: text || 'Click Me',
+        id: buttonId,
+        tagName: el.tagName,
+        type: el.type || 'button',
+        classes: el.className,
+        isVisible: el.checkVisibility ? el.checkVisibility() : true,
+        dimensions: { width: el.offsetWidth, height: el.offsetHeight },
+        elementType: 'button'
+      };
+    });
+
+    // better heading analysis
+    const headingElements = headings.map((heading, index) => {
+      const headingId = heading.id || `navvra-heading-${Date.now()}-${index}`;
+      elementMap.set(headingId, heading);
+      
+      return {
+        element: heading,
+        text: heading.textContent?.trim() || 'Untitled heading',
+        id: headingId,
+        level: heading.tagName,
+        isMainTitle: heading.tagName === 'H1' && index === 0,
+        elementType: 'heading'
+      };
+    });
+
+    // better link analysis
+    const linkElements = links
+      .filter(link => {
+        const text = link.textContent?.trim();
+        return text && text.length > 0 && text.length < 200;
+      })
+      .map((link, index) => {
+        const linkId = `navvra-link-${Date.now()}-${index}`;
+        elementMap.set(linkId, link);
+        
+        return {
+          element: link,
+          text: link.textContent?.trim(),
+          id: linkId,
+          href: link.href,
+          type: 'link',
+          isNavigation: /(\/|\?|#|home|about|contact|products|services)/i.test(link.href),
+          elementType: 'link'
+        };
+      })
+      .slice(0, 10);
+
+    // combine all elements for classification
+    const allElements = [...buttonElements, ...headingElements, ...linkElements];
+
+    console.log('Total elements found:', allElements.length);
+
+    // classify elements
+    let classifiedElements = allElements;
+    if (aiService && typeof aiService.classifyElements === 'function') {
+      try {
+        console.log('Using AI classification');
+        classifiedElements = aiService.classifyElements(allElements);
+        console.log('AI classification completed');
+      } catch (error) {
+        console.warn('AI classification failed, using rule-based fallback:', error);
+      }
+    } else {
+      console.log('Using rule-based classification (AI service not available)');
+      // basic scoring for rule-based
+      classifiedElements = allElements.map(element => {
+        const text = element.text?.toLowerCase() || '';
+        let score = 0;
+        
+        if (/(login|signin|register|signup|buy|purchase|add to cart|checkout|submit|apply|download|order|pay)/i.test(text)) score += 4;
+        if (/(search|find)/i.test(text)) score += 1;
+        if (/(save|confirm|apply)/i.test(text)) score += 2;
+        
+        return {
+          ...element,
+          score: score,
+          priority: score > 0 ? 8 : 3
+        };
+      });
+    }
+
+    // generate summary
+    let summary;
+    if (aiService && typeof aiService.generateSummary === 'function') {
+      try {
+        summary = await aiService.generateSummary(headingElements);
+      } catch (error) {
+        console.warn('AI summary failed:', error);
+        summary = generateContentSummary(headingElements);
+      }
+    } else {
+      summary = generateContentSummary(headingElements);
+    }
+
+    const result = {
+      elements: classifiedElements.sort((a, b) => (b.priority || 0) - (a.priority || 0)),
+      buttons: classifiedElements.filter(el => el.elementType === 'button'),
+      links: classifiedElements.filter(el => el.elementType === 'link'),
+      headings: classifiedElements.filter(el => el.elementType === 'heading'),
+      forms: forms.length,
+      inputs: inputs.length,
+      images: images.length,
+      summary: summary,
+      classified: !!aiService
     };
-  })
-  .filter(btn => btn.score > 0) // only include buttons with some importance
-  .sort((a, b) => b.score - a.score) // sort by score descending
-  .slice(0, 15); // take top 15
 
-  // process headings with actual DOM elements
-  const importantHeadings = headings.map((heading, index) => {
-    const headingId = heading.id || `navvra-heading-${Date.now()}-${index}`;
-    elementMap.set(headingId, heading);
-    
+    console.log('Final scan result:', result);
+    return result;
+
+  } catch (error) {
+    console.error('Error in scanImportantElements:', error);
+    // return safe fallback data
     return {
-      element: heading,
-      text: heading.textContent?.trim().substring(0, 30) + (heading.textContent?.trim().length > 30 ? '...' : ''),
-      id: headingId,
-      level: heading.tagName
+      elements: [],
+      buttons: [],
+      links: [],
+      headings: [],
+      forms: 0,
+      inputs: 0,
+      images: 0,
+      summary: "Error scanning page",
+      classified: false
     };
-  })
-  .slice(0, 10);
-
-  // process important links
-  const importantLinks = links.filter(link => {
-    const text = link.textContent?.trim();
-    return text && text.length > 0 && /(login|signin|sign up|register|shop|buy|download|contact|about)/i.test(text);
-  })
-  .map((link, index) => {
-    const linkId = `navvra-link-${Date.now()}-${index}`;
-    elementMap.set(linkId, link);
-    
-    return {
-      element: link,
-      text: link.textContent?.trim(),
-      id: linkId,
-      type: 'link'
-    };
-  })
-  .slice(0, 5);
-
-  return {
-    buttons: importantButtons,
-    links: importantLinks,
-    forms: forms.length,
-    headings: importantHeadings,
-    inputs: inputs.length,
-    summary: generateContentSummary(headings)
-  };
+  }
 }
 
 // simple content summary
 function generateContentSummary(headings) {
-  if (headings.length === 0) {
+  if (!headings || headings.length === 0) {
     return "No significant content detected.";
   }
   
-  const h1 = headings.find(h => h.tagName === 'H1');
-  const mainHeading = h1 ? h1.textContent : headings[0].textContent;
+  const h1 = headings.find(h => h.level === 'H1');
+  const mainHeading = h1 ? h1.text : headings[0].text;
   
   return `Page appears to be about "${mainHeading}". Found ${headings.length} sections and key headings.`;
 }
 
-// scan page and update the panel
-function scanPageAndUpdatePanel() {
-  const pageData = scanImportantElements();
-  currentPageData = pageData;
-  
-  // prep data for panel
-  const panelData = {
-    headings: pageData.headings,
-    actions: [
-      ...pageData.buttons.map(btn => ({
-        id: btn.id,
-        text: btn.text || 'Unlabeled button',
-        score: btn.score,
-        type: 'button'
-      })),
-      ...pageData.links.map(link => ({
-        id: link.id,
-        text: link.text,
-        type: 'link'
-      }))
-    ],
-    summary: pageData.summary
-  };
-  
-  // send data to panel
-  window.postMessage({
-    type: 'NAVVRA_UPDATE_DATA',
-    payload: panelData
-  }, '*');
+// scan page and update the panel - FIXED async handling
+async function scanPageAndUpdatePanel() {
+  try {
+    const pageData = await scanImportantElements();
+    currentPageData = pageData;
+    
+    // prep data for panel - FIXED data structure
+    const panelData = {
+      headings: pageData.headings || [],
+      actions: [
+        ...(pageData.buttons || []).map(btn => ({
+          id: btn.id,
+          text: btn.text || 'Unlabeled button',
+          score: btn.score || 0,
+          priority: btn.priority || 3,
+          category: btn.category || 'other',
+          confidence: btn.confidence || 0.8,
+          type: 'button'
+        })),
+        ...(pageData.links || []).map(link => ({
+          id: link.id,
+          text: link.text,
+          priority: link.priority || 2,
+          category: link.category || 'navigation',
+          confidence: link.confidence || 0.8,
+          type: 'link'
+        }))
+      ],
+      summary: pageData.summary || "No summary available",
+      classified: pageData.classified || false
+    };
+    
+    console.log('Sending data to panel:', panelData);
+    
+    // send data to panel
+    window.postMessage({
+      type: 'NAVVRA_UPDATE_DATA',
+      payload: panelData
+    }, '*');
+  } catch (error) {
+    console.error('Error in scanPageAndUpdatePanel:', error);
+  }
 }
 
 // click actual DOM elements
@@ -277,16 +358,30 @@ function applyMode(mode) {
   }
 }
 
-// listen for messages from popup
+// listen for messages from popup - FIXED async handling
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Content script received message:', request);
+  
   if (request.action === 'activatePanel') {
     injectFloatingPanel();
     sendResponse({ success: true });
   }
   
   if (request.action === 'scanPage') {
-    const data = scanImportantElements();
-    sendResponse({ data: data });
+    // Handle async scan
+    scanImportantElements().then(data => {
+      sendResponse({ data: data });
+    }).catch(error => {
+      console.error('Scan error:', error);
+      sendResponse({ data: { 
+        buttons: [], 
+        forms: 0, 
+        headings: [], 
+        inputs: 0,
+        summary: "Scan failed" 
+      }});
+    });
+    return true; // Keep message channel open for async response
   }
 
   if (request.action === 'clickElement') {
@@ -295,22 +390,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// rescan page when DOM changes (for dynamic content??)
-const observer = new MutationObserver(() => {
-  if (isPanelInjected) {
-    setTimeout(scanPageAndUpdatePanel, 500);
-  }
-});
-
-observer.observe(document.body, {
-  childList: true,
-  subtree: true,
-  attributes: true,
-  characterData: true
-});
-
-// Initial scan
+// Initial scan - FIXED async
 setTimeout(() => {
-  const initialData = scanImportantElements();
-  console.log('Navvra initial scan:', initialData);
+  scanImportantElements().then(data => {
+    console.log('Navvra initial scan completed:', data);
+  }).catch(error => {
+    console.error('Initial scan failed:', error);
+  });
 }, 1000);

@@ -27,6 +27,16 @@ function App() {
         }
         if (response && response.data) {
           setPageData(response.data);
+        } else {
+          // handle case where response exists
+          setPageData({ 
+            buttons: [], 
+            forms: 0, 
+            headings: [], 
+            inputs: 0,
+            links: [],
+            summary: "No page data received" 
+          });
         }
       });
     });
@@ -62,6 +72,27 @@ function App() {
     });
   };
 
+  // safe data access functions
+  const getButtons = () => {
+    return pageData?.buttons || [];
+  };
+
+  const getHeadings = () => {
+    return pageData?.headings || [];
+  };
+
+  const getFormsCount = () => {
+    return pageData?.forms || 0;
+  };
+
+  const getInputsCount = () => {
+    return pageData?.inputs || 0;
+  };
+
+  const getSummary = () => {
+    return pageData?.summary || "Analyzing page...";
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -77,32 +108,37 @@ function App() {
           </button>
         </div>
 
-        {pageData && (
+        {pageData ? (
           <div className="status">
             <h3>📊 Page Analysis</h3>
             <div className="stats-grid">
               <div className="stat">
-                <span className="stat-number">{pageData.buttons.length}</span>
+                <span className="stat-number">{getButtons().length}</span>
                 <span className="stat-label">Key Actions</span>
               </div>
               <div className="stat">
-                <span className="stat-number">{pageData.forms}</span>
+                <span className="stat-number">{getFormsCount()}</span>
                 <span className="stat-label">Forms</span>
               </div>
               <div className="stat">
-                <span className="stat-number">{pageData.headings.length}</span>
+                <span className="stat-number">{getHeadings().length}</span>
                 <span className="stat-label">Headings</span>
               </div>
               <div className="stat">
-                <span className="stat-number">{pageData.inputs}</span>
+                <span className="stat-number">{getInputsCount()}</span>
                 <span className="stat-label">Inputs</span>
               </div>
             </div>
+
+            <div className="summary-section">
+              <h4>📝 Summary</h4>
+              <div className="summary-text">{getSummary()}</div>
+            </div>
             
-            {pageData.buttons.length > 0 && (
+            {getButtons().length > 0 ? (
               <div className="actions-preview">
                 <h4>🎯 Top Actions Found:</h4>
-                {pageData.buttons.slice(0, 5).map((btn, index) => (
+                {getButtons().slice(0, 5).map((btn, index) => (
                   <div 
                     key={index} 
                     className="action-item clickable"
@@ -110,11 +146,22 @@ function App() {
                     title={`Click to trigger: ${btn.text}`}
                   >
                     <span>{btn.text || 'Unlabeled button'}</span> 
-                    <span className="score">({btn.score})</span>
+                    <span className="score">({btn.score || 0})</span>
                   </div>
                 ))}
               </div>
+            ) : (
+              <div className="no-actions">
+                <p>No interactive elements found on this page.</p>
+              </div>
             )}
+          </div>
+        ) : (
+          <div className="status">
+            <h3>📊 Page Analysis</h3>
+            <div className="loading">
+              <p>Scanning page...</p>
+            </div>
           </div>
         )}
       </header>
