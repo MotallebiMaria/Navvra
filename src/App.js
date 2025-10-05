@@ -110,31 +110,6 @@ function App() {
     });
   };
 
-  const activatePanel = () => {
-    setError(null);
-    console.log('Activating panel...');
-    
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        console.log('Sending activate message to tab:', tabs[0].id);
-        
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'activatePanel' }, (response) => {
-          console.log('Activate response:', response);
-          if (chrome.runtime.lastError) {
-            console.error('Error:', chrome.runtime.lastError);
-            setError('Content script not loaded. Try refreshing the page.');
-          } else if (response && response.success) {
-            setIsActive(true);
-            // Close the popup after activation
-            setTimeout(() => window.close(), 500);
-          } else {
-            setError('Failed to activate panel');
-          }
-        });
-      }
-    });
-  };
-
   const clickElement = (elementId) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
