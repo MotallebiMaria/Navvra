@@ -9,130 +9,234 @@
             position: fixed;
             left: 100px;
             top: 100px;
-            width: 300px; /* Initial width */
-            height: 400px; /* Initial height - added for clarity for resizing */
-            min-width: 250px; /* Minimum width */
-            min-height: 200px; /* Minimum height */
-            background: #1a1a1a;
+            width: 400px;
+            height: 500px;
+            min-width: 350px;
+            min-height: 400px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #8b258f 100%);
             color: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
             z-index: 10000;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            max-height: 80vh;
-            /* overflow-y: auto; -- we might adjust this or handle content scrolling within */
-            overflow: hidden; /* Important: Hide scrollbars until content needs it */
+            overflow: hidden;
             cursor: default;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .navvra-header {
-            background: #2563eb;
-            padding: 15px;
-            border-radius: 10px 10px 0 0;
+            background: transparent;
+            padding: 20px 20px 0 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: move;
             user-select: none;
+            color: white;
         }
         
-        .navvra-header h3 {
+        .navvra-header h1 {
             margin: 0;
-            font-size: 16px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .navvra-header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+            font-size: 14px;
         }
         
         .navvra-close {
-            background: none;
-            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
             font-size: 18px;
             cursor: pointer;
-            width: 24px;
-            height: 24px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.2s;
         }
         
         .navvra-close:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
         }
         
         .navvra-content {
-            padding: 15px;
+            padding: 20px;
+            height: calc(100% - 100px);
+            overflow-y: auto;
             cursor: default;
-            /* Allow content to scroll if panel is resized smaller than content */
-            overflow-y: auto; 
-            max-height: calc(100% - 60px); /* Adjust based on header height, e.g., 60px for header */
         }
         
-        .navvra-section {
-            margin-bottom: 20px;
+        .controls {
+            margin: 20px 0;
+            text-align: center;
         }
         
-        .navvra-section h4 {
-            margin: 0 0 10px 0;
+        .controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
             font-size: 14px;
+            color: white;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+        }
+        
+        .controls button:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .controls button:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        
+        .status {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: left;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .stat {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-number {
+            display: block;
+            font-size: 24px;
+            font-weight: bold;
             color: #60a5fa;
         }
         
-        .navvra-button {
+        .stat-label {
+            font-size: 12px;
+            opacity: 1;
+            color: #efefef;
+        }
+        
+        .actions-preview {
+            margin-top: 15px;
+        }
+        
+        .navvra-action-btn {
+            display: flex;
+            justify-content: space-between;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            align-items: center;
             width: 100%;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            margin: 5px 0;
-            border-radius: 5px;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59,130,246,0.2);
+            color: #e5e7eb;
+            padding: 10px 12px;
+            margin: 6px 0;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+        
+        .navvra-action-btn:hover {
+            background: rgba(59, 130, 246, 0.25);
+        }
+        
+        .action-text {
             text-align: left;
+            flex: 1 1 auto;
+        }
+        
+        .score {
+            color: #60a5fa;
+            font-weight: bold;
+        }
+        
+        .error-message {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
             font-size: 14px;
         }
         
-        .navvra-button:hover {
-            background: #2563eb;
+        .summary-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
         }
         
-        .navvra-summary {
-            background: #2d2d2d;
-            padding: 10px;
-            border-radius: 5px;
+        .summary-section h4 {
+            margin: 0 0 10px 0;
+            color: #60a5fa;
+        }
+        
+        .summary-bullets {
+            margin: 0;
+            padding-left: 18px;
+            list-style: disc;
+        }
+        
+        .summary-bullets li {
+            margin-bottom: 12px;
             font-size: 14px;
             line-height: 1.4;
+            color: #e5e7eb;
         }
         
-        .navvra-mode-selector {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 15px;
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #9ca3af;
         }
         
-        .mode-btn {
-            flex: 1;
-            padding: 8px;
-            border: none;
-            border-radius: 5px;
-            background: #374151;
-            color: white;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        
-        .mode-btn.active {
-            background: #2563eb;
+        .no-actions {
+            text-align: center;
+            padding: 20px;
+            color: #9ca3af;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-top: 15px;
         }
 
         /* Resize handle */
         .resize-handle {
             position: absolute;
-            bottom: 0; /* Changed to 0 */
-            right: 0;  /* Changed to 0 */
-            width: 16px; /* Slightly larger for easier grabbing */
-            height: 16px; /* Slightly larger */
-            background: linear-gradient(135deg, transparent 50%, #6b7280 50%);
+            bottom: 0;
+            right: 0;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.3) 50%);
             cursor: nwse-resize;
             z-index: 10001;
+            border-radius: 0 0 12px 0;
         }
 
         /* Dragging state */
@@ -140,51 +244,254 @@
             cursor: grabbing !important;
             user-select: none;
         }
+        
         /* Resizing state */
         .resizing {
             cursor: nwse-resize !important;
             user-select: none;
+        }
+
+        /* Scrollbar styling */
+        .navvra-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .navvra-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        
+        .navvra-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+        
+        .navvra-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .h1 {
+            color: white;
         }
     </style>
 </head>
 <body>
     <div id="navvra-panel">
         <div class="navvra-header" id="navvra-header">
-            <h3>🧭 Navvra Assistant</h3>
+            <div>
+                <h1>🧭 Navvra</h1>
+                <p>AI-powered accessibility assistant</p>
+            </div>
             <button class="navvra-close" id="navvra-close">×</button>
         </div>
         
-        <div class="navvra-content">
-            <div class="navvra-mode-selector">
-                <button class="mode-btn active" data-mode="focus">Focus</button>
-                <button class="mode-btn" data-mode="task">Task</button>
-                <button class="mode-btn" data-mode="content">Content</button>
-            </div>
-            
-            <div class="navvra-section">
-                <h4>🧭 Navigation</h4>
-                <div id="navvra-navigation">
-                    <div style="color: #9ca3af; font-size: 12px; text-align: center;">Loading...</div>
-                </div>
-            </div>
-            
-            <div class="navvra-section">
-                <h4>🎯 Key Actions</h4>
-                <div id="navvra-actions">
-                    <div style="color: #9ca3af; font-size: 12px; text-align: center;">Loading...</div>
-                </div>
-            </div>
-            
-            <div class="navvra-section">
-                <h4>📝 Content Summary</h4>
-                <div class="navvra-summary" id="navvra-summary">
-                    Analyzing page content...
-                </div>
+        <div class="navvra-content" id="navvra-content">
+            <!-- Content will be dynamically populated by contentScript.js -->
+            <div class="loading">
+                <p>Loading Navvra Panel...</p>
             </div>
         </div>
         
         <div class="resize-handle" id="resize-handle"></div>
     </div>
 
-    </body>  
+    <script>
+    // Basic panel functionality
+    console.log('Navvra Panel: Initializing...');
+    
+    let isDragging = false;
+    let isResizing = false;
+    let startX, startY, startWidth, startHeight, startLeft, startTop;
+    
+    const panel = document.getElementById('navvra-panel');
+    const header = document.getElementById('navvra-header');
+    const closeBtn = document.getElementById('navvra-close');
+    const resizeHandle = document.getElementById('resize-handle');
+    const content = document.getElementById('navvra-content');
+    
+    // Close panel
+    closeBtn.addEventListener('click', () => {
+        panel.remove();
+    });
+    
+    // Dragging functionality
+    header.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', stopDrag);
+    
+    function startDrag(e) {
+        if (e.target.classList.contains('navvra-close')) return;
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = panel.offsetLeft;
+        startTop = panel.offsetTop;
+        panel.classList.add('dragging');
+    }
+    
+    function onDrag(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        panel.style.left = (startLeft + dx) + 'px';
+        panel.style.top = (startTop + dy) + 'px';
+    }
+    
+    function stopDrag() {
+        isDragging = false;
+        panel.classList.remove('dragging');
+    }
+    
+    // Resizing functionality
+    resizeHandle.addEventListener('mousedown', startResize);
+    
+    function startResize(e) {
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = parseInt(document.defaultView.getComputedStyle(panel).width, 10);
+        startHeight = parseInt(document.defaultView.getComputedStyle(panel).height, 10);
+        panel.classList.add('resizing');
+        
+        document.addEventListener('mousemove', onResize);
+        document.addEventListener('mouseup', stopResize);
+    }
+    
+    function onResize(e) {
+        if (!isResizing) return;
+        const width = startWidth + (e.clientX - startX);
+        const height = startHeight + (e.clientY - startY);
+        panel.style.width = Math.max(350, width) + 'px';
+        panel.style.height = Math.max(400, height) + 'px';
+    }
+    
+    function stopResize() {
+        isResizing = false;
+        panel.classList.remove('resizing');
+        document.removeEventListener('mousemove', onResize);
+        document.removeEventListener('mouseup', stopResize);
+    }
+    
+    // Listen for data updates from content script
+    window.addEventListener('message', (event) => {
+        console.log('Panel received message:', event.data);
+        if (event.data.type === 'NAVVRA_UPDATE_PANEL_DATA') {
+            updatePanelContent(event.data.payload);
+        }
+    });
+    
+    // Function to update panel content (will be called by contentScript.js)
+    function updatePanelContent(data) {
+        console.log('Navvra Panel: Updating content with data:', data);
+        
+        const buttons = data.buttons || [];
+        const headings = data.headings || [];
+        const forms = data.forms || 0;
+        const inputs = data.inputs || 0;
+        const summary = data.summary || 'No summary available';
+        
+        // Render summary as bullet points (same as App.js)
+        const renderSummaryAsBullets = (summaryText) => {
+            if (!summaryText) return '<div class="loading">No summary available</div>';
+            const parts = summaryText.split(/\n\n|\n/).map(p => p.trim()).filter(p => p.length > 0);
+            return `
+                <ul class="summary-bullets">
+                    ${parts.map((part, idx) => 
+                        `<li>${part.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`
+                    ).join('')}
+                </ul>
+            `;
+        };
+        
+        // Build the panel content (EXACT COPY of App.js structure)
+        content.innerHTML = `
+            ${data.error ? `
+                <div class="error-message">
+                    ⚠️ ${data.error}
+                    <br />
+                    <small>Try refreshing the page and try again</small>
+                </div>
+            ` : ''}
+            
+            <div class="controls">
+                <button class="panel-rescan-btn">
+                    Rescan Page
+                </button>
+            </div>
+            
+            <div class="status">
+                <h3>📊 Page Analysis</h3>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <span class="stat-number">${buttons.length}</span>
+                        <span class="stat-label">Key Actions</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">${forms}</span>
+                        <span class="stat-label">Forms</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">${headings.length}</span>
+                        <span class="stat-label">Headings</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">${inputs}</span>
+                        <span class="stat-label">Inputs</span>
+                    </div>
+                </div>
+                
+                <div class="summary-section">
+                    <h4>📝 Summary</h4>
+                    <div class="summary-text">${renderSummaryAsBullets(summary)}</div>
+                </div>
+                
+                ${buttons.length > 0 ? `
+                    <div class="actions-preview">
+                        <h4>🎯 Top Actions Found:</h4>
+                        ${buttons.slice(0, 5).map((btn, index) => `
+                            <button 
+                                class="navvra-action-btn" 
+                                data-element-id="${btn.id}"
+                                title="Click to trigger: ${btn.text}"
+                            >
+                                <span class="action-text">${btn.text || 'Unlabeled button'}</span>
+                                <span class="score">(${btn.score || 0})</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="no-actions">
+                        <p>No interactive elements found on this page.</p>
+                    </div>
+                `}
+            </div>
+        `;
+        
+        // Add click handlers to action buttons
+        content.querySelectorAll('.navvra-action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const elementId = e.currentTarget.getAttribute('data-element-id');
+                console.log('Panel: Clicking element:', elementId);
+                window.postMessage({
+                    type: 'NAVVRA_TRIGGER_ACTION',
+                    elementId: elementId
+                }, '*');
+            });
+        });
+        
+        // Add click handler to rescan button - FIXED: use class selector instead of ID
+        const rescanBtn = content.querySelector('.panel-rescan-btn');
+        if (rescanBtn) {
+            rescanBtn.addEventListener('click', () => {
+                console.log('Panel: Requesting rescan...');
+                window.postMessage({
+                    type: 'NAVVRA_REQUEST_RESCAN'
+                }, '*');
+            });
+        }
+    }
+    
+    console.log('Navvra Panel: Ready to receive data');
+</script>
+</body>
 </html>
