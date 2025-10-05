@@ -110,6 +110,18 @@ function App() {
     });
   };
 
+  const activatePanel = () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs[0];
+
+      chrome.tabs.sendMessage(activeTab.id, { action: 'activatePanel' }, (response) => {
+        if (response && response.success) {
+          setIsActive(true);
+        }
+      });
+    });
+  };
+
   const clickElement = (elementId) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
