@@ -14,6 +14,17 @@ function App() {
       const activeTab = tabs[0];
       
       chrome.tabs.sendMessage(activeTab.id, { action: 'scanPage' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('Content script not ready:', chrome.runtime.lastError);
+          setPageData({ 
+            buttons: [], 
+            forms: 0, 
+            headings: [], 
+            inputs: 0,
+            summary: "Please refresh the page and try again" 
+          });
+          return;
+        }
         if (response && response.data) {
           setPageData(response.data);
         }
