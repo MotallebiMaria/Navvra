@@ -15,22 +15,23 @@ function App() {
     console.log('Scanning current page...');
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
-      if (tabs[0]) {
-        console.log('Sending scan message to tab:', tabs[0].id);
-        chrome.tabs.sendMessage(activeTab.id, { action: 'scanPage' }, (response) => {
-        console.log('Scan response:', response);
+      
+      chrome.tabs.sendMessage(activeTab.id, { action: 'scanPage' }, (response) => {
         if (chrome.runtime.lastError) {
-            console.error('Error:', chrome.runtime.lastError);
-            setError('Content script not loaded on this page. Try refreshing the page.');
-          } else if (response && response.data) {
-            setPageData(response.data);
-          } else {
-            setError('No response from content script');
-          }
-        });
-      } else {
-        setError('No active tab found');
-      }
+          console.log('Content script not ready:', chrome.runtime.lastError);
+          setPageData({ 
+            buttons: [], 
+            forms: 0, 
+            headings: [], 
+            inputs: 0,
+            summary: "Please refresh the page and try again" 
+          });
+          return;
+        }
+        if (response && response.data) {
+          setPageData(response.data);
+        }
+      });
     });
   };
 
