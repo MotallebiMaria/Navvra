@@ -59,6 +59,24 @@ function App() {
     });
   };
 
+  const clickElement = (elementId) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs[0];
+      
+      // send message to content script to click the actual element
+      chrome.tabs.sendMessage(activeTab.id, { 
+        action: 'clickElement',
+        elementId: elementId
+      }, (response) => {
+        if (response && response.success) {
+          console.log('Successfully clicked element:', elementId);
+          // close the popup after clicking
+          window.close();
+        }
+      });
+    });
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -108,9 +126,14 @@ function App() {
             {pageData.buttons && pageData.buttons.length > 0 && (
               <div className="actions-preview">
                 <h4>🎯 Top Actions Found:</h4>
-                {pageData.buttons.slice(0, 3).map((btn, index) => (
-                  <div key={index} className="action-item">
-                    {btn.text || 'Unlabeled button'} 
+                {pageData.buttons.slice(0, 5).map((btn, index) => (
+                  <div 
+                    key={index} 
+                    className="action-item clickable"
+                    onClick={() => clickElement(btn.id)}
+                    title={`Click to trigger: ${btn.text}`}
+                  >
+                    <span>{btn.text || 'Unlabeled button'}</span> 
                     <span className="score">({btn.score})</span>
                   </div>
                 ))}
