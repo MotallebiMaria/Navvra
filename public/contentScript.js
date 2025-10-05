@@ -115,6 +115,10 @@ function setupPanelInteractions() {
 // enhanced DOM scanning WITH AI CLASSIFICATION for important elements
 async function scanImportantElements() {
   try {
+    // re-attempt loading AI service in case aiLoader.js was injected dynamically
+    try { loadAIService(); } catch (e) { console.warn('loadAIService failed during scan:', e); }
+    
+    console.log('Navvra: starting full page scan...');
     const buttons = Array.from(document.querySelectorAll('button, [role="button"], input[type="submit"], input[type="button"], a.btn, a.button'));
     const forms = Array.from(document.querySelectorAll('form'));
     const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
@@ -183,6 +187,9 @@ async function scanImportantElements() {
       })
       .slice(0, 10);
 
+    // EXTRACT FULL PAGE CONTENT for AI analysis
+    const fullPageContent = extractFullPageContent();
+    
     // combine all elements for classification
     const allElements = [...buttonElements, ...headingElements, ...linkElements];
 
@@ -217,19 +224,25 @@ async function scanImportantElements() {
       });
     }
 
-    // generate summary
+    // generate summary - NOW WITH FULL PAGE CONTENT
     let summary;
     if (aiService && typeof aiService.generateSummary === 'function') {
       try {
-        summary = await aiService.generateSummary(headingElements);
+        summary = await aiService.generateSummary(
+          headingElements, 
+          buttonElements, 
+          linkElements,
+          forms.length,
+          fullPageContent // pass full page content to AI
+        );
       } catch (error) {
         console.warn('AI summary failed:', error);
-        summary = generateContentSummary(headingElements);
+        summary = generateContentSummary(headingElements, buttonElements, linkElements, forms.length, fullPageContent);
       }
     } else {
-      summary = generateContentSummary(headingElements);
+      summary = generateContentSummary(headingElements, buttonElements, linkElements, forms.length, fullPageContent);
     }
-
+    
     const result = {
       elements: classifiedElements.sort((a, b) => (b.priority || 0) - (a.priority || 0)),
       buttons: classifiedElements.filter(el => el.elementType === 'button'),
@@ -239,10 +252,12 @@ async function scanImportantElements() {
       inputs: inputs.length,
       images: images.length,
       summary: summary,
-      classified: !!aiService
+      classified: !!aiService,
+      fullPageContent: fullPageContent
     };
 
     console.log('Final scan result:', result);
+    console.log('Navvra: full page scan complete');
     return result;
 
   } catch (error) {
@@ -262,21 +277,119 @@ async function scanImportantElements() {
   }
 }
 
-// simple content summary
-function generateContentSummary(headings) {
-  if (!headings || headings.length === 0) {
-    return "No significant content detected.";
+// extract comprehensive page content for AI analysis
+function extractFullPageContent() {
+  try {
+    // get main content areas (prioritize these)
+    const mainContentSelectors = [
+      'main', '[role="main"]', '.content', '.main', '#content', '#main',
+      'article', '.article', '[role="article"]', '.post', '.blog-post',
+      '.page-content', '.main-content', '.body-content'
+    ];
+    
+    let mainContent = '';
+    
+    // try to find main content areas first
+    for (const selector of mainContentSelectors) {
+      const element = document.querySelector(selector);
+      if (element) {
+        mainContent = extractTextFromElement(element);
+        if (mainContent.length > 100) break; // that's probably substancial
+      }
+    }
+    
+    // if no main content found, use body but exclude common noise
+    if (mainContent.length < 100) {
+      const body = document.body.cloneNode(true);
+      
+      // remove common noisy elements
+      const noiseSelectors = [
+        'script', 'style', 'nav', 'header', 'footer', 'aside',
+        '.ad', '.advertisement', '.banner', '.popup', '.modal',
+        '.sidebar', '.menu', '.navigation', '.cookie-banner'
+      ];
+      
+      noiseSelectors.forEach(selector => {
+        body.querySelectorAll(selector).forEach(el => el.remove());
+      });
+      
+      mainContent = extractTextFromElement(body);
+    }
+    
+    // get page metadata
+    const pageTitle = document.title;
+    const metaDescription = document.querySelector('meta[name="description"]')?.content || '';
+    const metaKeywords = document.querySelector('meta[name="keywords"]')?.content || '';
+    
+    // get all headings for structure
+    const allHeadings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+      .map(h => ({ level: h.tagName, text: h.textContent?.trim() }))
+      .filter(h => h.text && h.text.length > 0);
+    
+    // get key interactive elements
+    const keyButtons = Array.from(document.querySelectorAll('button, [role="button"], input[type="submit"]'))
+      .map(el => el.textContent?.trim() || el.value || el.placeholder || '')
+      .filter(text => text.length > 0)
+      .slice(0, 10);
+    
+    const keyLinks = Array.from(document.querySelectorAll('a[href]'))
+      .map(a => a.textContent?.trim())
+      .filter(text => text && text.length > 0 && text.length < 50)
+      .slice(0, 10);
+    
+    return {
+      title: pageTitle,
+      description: metaDescription,
+      keywords: metaKeywords,
+      mainContent: mainContent.substring(0, 4000), // limit to avoid token limits
+      headings: allHeadings,
+      buttons: keyButtons,
+      links: keyLinks,
+      url: window.location.href,
+      timestamp: new Date().toISOString()
+    };
+    
+  } catch (error) {
+    console.error('Error extracting full page content:', error);
+    return {
+      title: document.title,
+      mainContent: document.body.textContent?.substring(0, 2000) || '',
+      url: window.location.href
+    };
+  }
+}
+
+// helper to extract clean text from element
+function extractTextFromElement(element) {
+  return element.textContent
+    ?.replace(/\s+/g, ' ')
+    ?.trim()
+    ?.substring(0, 5000) || ''; // Limit length
+}
+
+// enhanced content summary with full page analysis
+function generateContentSummary(headings, buttons, links, formCount, fullPageContent) {
+  // if we have full page content, use enhanced analysis
+  if (fullPageContent && fullPageContent.mainContent) {
+    const aiService = window.NavvraAIService;
+    if (aiService && aiService.generateEnhancedLocalSummary) {
+      return aiService.generateEnhancedLocalSummary(headings, buttons, links, formCount, fullPageContent);
+    }
   }
   
+  // fallback to basic summary
   const h1 = headings.find(h => h.level === 'H1');
-  const mainHeading = h1 ? h1.text : headings[0].text;
+  const mainHeading = h1 ? h1.text : headings[0]?.text || 'This page';
   
-  return `Page appears to be about "${mainHeading}". Found ${headings.length} sections and key headings.`;
+  return `🧭 **${mainHeading}**\n\nThis page contains ${buttons.length} interactive elements and ${headings.length} content sections. Use the navigation panel to explore the page.`;
 }
 
 // scan page and update the panel - FIXED async handling
 async function scanPageAndUpdatePanel() {
   try {
+    console.log('Navvra: scanning page to update injected panel...');
+    // ensure AI service is loaded before scanning
+    try { loadAIService(); } catch (e) { console.warn('loadAIService failed before panel update:', e); }
     const pageData = await scanImportantElements();
     currentPageData = pageData;
     
@@ -307,6 +420,7 @@ async function scanPageAndUpdatePanel() {
     };
     
     console.log('Sending data to panel:', panelData);
+    console.log('Navvra: panel update posted');
     
     // send data to panel
     window.postMessage({
@@ -436,7 +550,56 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'scanPage') {
     // Handle async scan
     scanImportantElements().then(data => {
-      sendResponse({ data: data });
+      // sanitize data before sending to popup (remove actual DOM element references)
+      const sanitize = (raw) => {
+        return {
+          buttons: (raw.buttons || []).map(btn => ({
+            id: btn.id,
+            text: btn.text,
+            score: btn.score,
+            priority: btn.priority,
+            category: btn.category,
+            confidence: btn.confidence,
+            tagName: btn.tagName,
+            type: btn.type,
+            classes: btn.classes,
+            isVisible: !!btn.isVisible,
+            dimensions: btn.dimensions,
+            elementType: btn.elementType
+          })),
+          links: (raw.links || []).map(l => ({
+            id: l.id,
+            text: l.text,
+            href: l.href,
+            priority: l.priority,
+            category: l.category,
+            confidence: l.confidence,
+            isNavigation: l.isNavigation,
+            elementType: l.elementType
+          })),
+          headings: (raw.headings || []).map(h => ({
+            id: h.id,
+            text: h.text,
+            level: h.level,
+            isMainTitle: h.isMainTitle,
+            elementType: h.elementType
+          })),
+          forms: raw.forms || 0,
+          inputs: raw.inputs || 0,
+          images: raw.images || 0,
+          summary: raw.summary || '',
+          classified: !!raw.classified,
+          fullPageContent: raw.fullPageContent || {}
+        };
+      };
+
+      try {
+        const safe = sanitize(data);
+        sendResponse({ data: safe });
+      } catch (e) {
+        console.error('Error sanitizing scan data:', e);
+        sendResponse({ data: { buttons: [], forms: 0, headings: [], inputs: 0, summary: 'Scan failed' } });
+      }
     }).catch(error => {
       console.error('Scan error:', error);
       sendResponse({ data: { 
