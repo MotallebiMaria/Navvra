@@ -53,63 +53,227 @@ function injectFloatingPanel() {
   })
 }
 
+console.log('Content script: Checking if panel injection worked...');
+
+// Test function to manually trigger panel update
+window.testPanelUpdate = function() {
+  console.log('Manual test: triggering panel update');
+  scanPageAndUpdatePanel();
+};
+
 // Simple panel interactions
+// Simple panel interactions - COMPLETELY REWRITTEN
 function setupPanelInteractions() {
+  console.log('Setting up panel interactions...');
+  
   const panel = document.getElementById('navvra-panel');
   const header = document.getElementById('navvra-header');
   const closeBtn = document.getElementById('navvra-close');
   const resizeHandle = document.getElementById('resize-handle');
+  const content = document.getElementById('navvra-content');
 
-  if (!panel || !header) return;
+  if (!panel || !header) {
+    console.error('Panel elements not found!');
+    return;
+  }
+
+  console.log('Panel elements found, setting up interactions...');
+
+  let isDragging = false;
+  let isResizing = false;
+  let startX, startY, startWidth, startHeight, startLeft, startTop;
 
   // Close panel
   closeBtn.addEventListener('click', () => {
+    console.log('Closing panel...');
     panel.remove();
     isPanelInjected = false;
   });
 
-  // Simple dragging
+  // Dragging functionality
   header.addEventListener('mousedown', startDrag);
-  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mousemove', onDrag);
   document.addEventListener('mouseup', stopDrag);
 
   function startDrag(e) {
     if (e.target.classList.contains('navvra-close')) return;
     isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = panel.offsetLeft;
+    startTop = panel.offsetTop;
+    panel.classList.add('dragging');
   }
 
-  function onDragMove(e) {
+  function onDrag(e) {
     if (!isDragging) return;
-    panel.style.left = e.clientX - 150 + 'px'; // Center panel on cursor
-    panel.style.top = e.clientY - 20 + 'px';
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    panel.style.left = (startLeft + dx) + 'px';
+    panel.style.top = (startTop + dy) + 'px';
   }
 
   function stopDrag() {
     isDragging = false;
+    panel.classList.remove('dragging');
   }
 
-  // Simple resizing
+  // Resizing functionality
   if (resizeHandle) {
     resizeHandle.addEventListener('mousedown', startResize);
     
     function startResize(e) {
       isResizing = true;
-      document.addEventListener('mousemove', onResizeMove);
+      startX = e.clientX;
+      startY = e.clientY;
+      startWidth = parseInt(document.defaultView.getComputedStyle(panel).width, 10);
+      startHeight = parseInt(document.defaultView.getComputedStyle(panel).height, 10);
+      panel.classList.add('resizing');
+      
+      document.addEventListener('mousemove', onResize);
       document.addEventListener('mouseup', stopResize);
     }
 
-    function onResizeMove(e) {
+    function onResize(e) {
       if (!isResizing) return;
-      panel.style.width = Math.max(250, e.clientX - panel.offsetLeft) + 'px';
-      panel.style.height = Math.max(200, e.clientY - panel.offsetTop) + 'px';
+      const width = startWidth + (e.clientX - startX);
+      const height = startHeight + (e.clientY - startY);
+      panel.style.width = Math.max(350, width) + 'px';
+      panel.style.height = Math.max(400, height) + 'px';
     }
 
     function stopResize() {
       isResizing = false;
-      document.removeEventListener('mousemove', onResizeMove);
+      panel.classList.remove('resizing');
+      document.removeEventListener('mousemove', onResize);
       document.removeEventListener('mouseup', stopResize);
     }
   }
+
+  // Listen for panel updates and handle them in content script
+  window.addEventListener('message', function panelMessageHandler(event) {
+    console.log('Panel message handler received:', event.data);
+    
+    if (event.data.type === 'NAVVRA_UPDATE_PANEL_DATA') {
+      console.log('Updating panel content from content script...');
+      updatePanelContent(event.data.payload);
+    }
+  });
+
+  // Function to update panel content
+  function updatePanelContent(data) {
+    console.log('Content script: Updating panel with data:', data);
+    
+    const buttons = data.buttons || [];
+    const headings = data.headings || [];
+    const forms = data.forms || 0;
+    const inputs = data.inputs || 0;
+    const summary = data.summary || 'No summary available';
+    
+    // Render summary as bullet points
+    const renderSummaryAsBullets = (summaryText) => {
+      if (!summaryText) return '<div class="loading">No summary available</div>';
+      const parts = summaryText.split(/\n\n|\n/).map(p => p.trim()).filter(p => p.length > 0);
+      return `
+        <ul class="summary-bullets">
+          ${parts.map((part, idx) => 
+            `<li>${part.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`
+          ).join('')}
+        </ul>
+      `;
+    };
+    
+    // Build the panel content
+    content.innerHTML = `
+      ${data.error ? `
+        <div class="error-message">
+          ⚠️ ${data.error}
+          <br />
+          <small>Try refreshing the page and try again</small>
+        </div>
+      ` : ''}
+      
+      <div class="controls">
+        <button class="panel-rescan-btn">
+          Rescan Page
+        </button>
+      </div>
+      
+      <div class="status">
+        <h3>📊 Page Analysis</h3>
+        <div class="stats-grid">
+          <div class="stat">
+            <span class="stat-number">${buttons.length}</span>
+            <span class="stat-label">Key Actions</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number">${forms}</span>
+            <span class="stat-label">Forms</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number">${headings.length}</span>
+            <span class="stat-label">Headings</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number">${inputs}</span>
+            <span class="stat-label">Inputs</span>
+          </div>
+        </div>
+        
+        <div class="summary-section">
+          <h4>📝 Summary</h4>
+          <div class="summary-text">${renderSummaryAsBullets(summary)}</div>
+        </div>
+        
+        ${buttons.length > 0 ? `
+          <div class="actions-preview">
+            <h4>🎯 Top Actions Found:</h4>
+            ${buttons.slice(0, 5).map((btn, index) => `
+              <button 
+                class="navvra-action-btn" 
+                data-element-id="${btn.id}"
+                title="Click to trigger: ${btn.text}"
+              >
+                <span class="action-text">${btn.text || 'Unlabeled button'}</span>
+                <span class="score">(${btn.score || 0})</span>
+              </button>
+            `).join('')}
+          </div>
+        ` : `
+          <div class="no-actions">
+            <p>No interactive elements found on this page.</p>
+          </div>
+        `}
+      </div>
+    `;
+    
+    // Add click handlers to action buttons
+    content.querySelectorAll('.navvra-action-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const elementId = e.currentTarget.getAttribute('data-element-id');
+        console.log('Panel: Clicking element:', elementId);
+        // Use the existing click function from content script
+        clickActualElement(elementId);
+      });
+    });
+    
+    // Add click handler to rescan button
+    const rescanBtn = content.querySelector('.panel-rescan-btn');
+    if (rescanBtn) {
+      rescanBtn.addEventListener('click', () => {
+        console.log('Panel: Requesting rescan...');
+        scanPageAndUpdatePanel();
+      });
+    }
+
+    console.log('Panel content updated successfully!');
+  }
+
+  // Force an initial data load
+  setTimeout(() => {
+    console.log('Forcing initial panel data load...');
+    scanPageAndUpdatePanel();
+  }, 100);
 }
 
 // enhanced DOM scanning WITH AI CLASSIFICATION for important elements
@@ -384,51 +548,96 @@ function generateContentSummary(headings, buttons, links, formCount, fullPageCon
   return `🧭 **${mainHeading}**\n\nThis page contains ${buttons.length} interactive elements and ${headings.length} content sections. Use the navigation panel to explore the page.`;
 }
 
-// scan page and update the panel - FIXED async handling
+// scan page and update the panel - FIXED VERSION
 async function scanPageAndUpdatePanel() {
   try {
     console.log('Navvra: scanning page to update injected panel...');
-    // ensure AI service is loaded before scanning
-    try { loadAIService(); } catch (e) { console.warn('loadAIService failed before panel update:', e); }
     const pageData = await scanImportantElements();
     currentPageData = pageData;
     
-    // prep data for panel - FIXED data structure
-    const panelData = {
-      headings: pageData.headings || [],
-      actions: [
-        ...(pageData.buttons || []).map(btn => ({
-          id: btn.id,
-          text: btn.text || 'Unlabeled button',
-          score: btn.score || 0,
-          priority: btn.priority || 3,
-          category: btn.category || 'other',
-          confidence: btn.confidence || 0.8,
-          type: 'button'
-        })),
-        ...(pageData.links || []).map(link => ({
-          id: link.id,
-          text: link.text,
-          priority: link.priority || 2,
-          category: link.category || 'navigation',
-          confidence: link.confidence || 0.8,
-          type: 'link'
-        }))
-      ],
-      summary: pageData.summary || "No summary available",
-      classified: pageData.classified || false
+    // Sanitize data - remove any DOM elements and ensure only simple data types
+    const sanitizeElement = (element) => {
+      // Remove any DOM element references and keep only simple data
+      const sanitized = { ...element };
+      
+      // Remove the actual DOM element reference
+      delete sanitized.element;
+      
+      // Ensure all values are simple data types
+      Object.keys(sanitized).forEach(key => {
+        const value = sanitized[key];
+        if (value instanceof HTMLElement || value instanceof Node) {
+          delete sanitized[key];
+        } else if (typeof value === 'object' && value !== null) {
+          // Recursively sanitize nested objects
+          sanitized[key] = JSON.parse(JSON.stringify(value));
+        }
+      });
+      
+      return sanitized;
     };
     
-    console.log('Sending data to panel:', panelData);
-    console.log('Navvra: panel update posted');
+    // Prepare data for panel (EXACT SAME STRUCTURE as popup) - COMPLETELY SANITIZED
+    const panelData = {
+      buttons: (pageData.buttons || []).map(btn => ({
+        id: btn.id || '',
+        text: (btn.text || 'Unlabeled button').substring(0, 100), // Limit length
+        score: btn.score || 0,
+        priority: btn.priority || 3,
+        category: btn.category || 'other',
+        confidence: btn.confidence || 0.8,
+        tagName: String(btn.tagName || ''),
+        type: String(btn.type || 'button'),
+        classes: String(btn.classes || ''),
+        isVisible: Boolean(btn.isVisible),
+        dimensions: btn.dimensions ? {
+          width: Number(btn.dimensions.width) || 0,
+          height: Number(btn.dimensions.height) || 0
+        } : { width: 0, height: 0 },
+        elementType: String(btn.elementType || 'button')
+      })),
+      
+      headings: (pageData.headings || []).map(heading => ({
+        id: heading.id || '',
+        text: (heading.text || 'Untitled heading').substring(0, 100),
+        level: String(heading.level || ''),
+        isMainTitle: Boolean(heading.isMainTitle),
+        elementType: String(heading.elementType || 'heading')
+      })),
+      
+      forms: Number(pageData.forms) || 0,
+      inputs: Number(pageData.inputs) || 0,
+      images: Number(pageData.images) || 0,
+      summary: String(pageData.summary || "No summary available"),
+      classified: Boolean(pageData.classified)
+    };
     
-    // send data to panel
+    console.log('Sending SANITIZED data to panel:', panelData);
+    
+    // Send data to panel using the new message type
     window.postMessage({
-      type: 'NAVVRA_UPDATE_DATA',
+      type: 'NAVVRA_UPDATE_PANEL_DATA',
       payload: panelData
     }, '*');
+    
   } catch (error) {
     console.error('Error in scanPageAndUpdatePanel:', error);
+    
+    // Send safe error data to panel
+    const errorData = {
+      error: "Failed to scan page",
+      buttons: [],
+      headings: [],
+      forms: 0,
+      inputs: 0,
+      summary: "Scan failed - please try again",
+      classified: false
+    };
+    
+    window.postMessage({
+      type: 'NAVVRA_UPDATE_PANEL_DATA',
+      payload: errorData
+    }, '*');
   }
 }
 
@@ -502,6 +711,11 @@ window.addEventListener('message', (event) => {
   
   if (event.data.type === 'NAVVRA_MODE_CHANGE') {
     applyMode(event.data.mode);
+  }
+
+  if (event.data.type === 'NAVVRA_REQUEST_RESCAN') {
+      console.log('Content script: Received rescan request from panel');
+      scanPageAndUpdatePanel();
   }
 });
 
