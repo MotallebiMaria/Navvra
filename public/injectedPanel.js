@@ -46,19 +46,30 @@ function updatePanelData(data) {
     if (data.headings && data.headings.length > 0) {
         navContainer.innerHTML = data.headings.slice(0, 5).map(heading => 
             `<button class="navvra-button" onclick="scrollToHeading('${heading.id}')">
-                ${heading.text}
+                📍 ${heading.text}
             </button>`
         ).join('');
+    } else {
+        navContainer.innerHTML = '<div style="color: #999; font-size: 12px;">No headings found</div>';
     }
     
     // update actions section
     const actionsContainer = document.getElementById('navvra-actions');
     if (data.actions && data.actions.length > 0) {
-        actionsContainer.innerHTML = data.actions.slice(0, 5).map(action => 
-            `<button class="navvra-button" onclick="triggerAction('${action.id}')">
-                ${action.text}
-            </button>`
-        ).join('');
+        actionsContainer.innerHTML = data.actions.map(action => {
+            let icon = '🔘';
+            if (action.type === 'link') icon = '🔗';
+            if (action.text.toLowerCase().includes('login') || action.text.toLowerCase().includes('sign in')) icon = '🔑';
+            if (action.text.toLowerCase().includes('buy') || action.text.toLowerCase().includes('cart') || action.text.toLowerCase().includes('checkout')) icon = '🛒';
+            if (action.text.toLowerCase().includes('search')) icon = '🔍';
+            if (action.text.toLowerCase().includes('submit')) icon = '📤';
+            
+            return `<button class="navvra-button" onclick="triggerAction('${action.id}')">
+                ${icon} ${action.text}
+            </button>`;
+        }).join('');
+    } else {
+        actionsContainer.innerHTML = '<div style="color: #999; font-size: 12px;">No actions found</div>';
     }
     
     // update summary
@@ -68,8 +79,9 @@ function updatePanelData(data) {
     }
 }
 
-// functions to be called from buttons
+// functions to be called from buttons - THESE NOW CLICK ACTUAL ELEMENTS!!
 window.scrollToHeading = function(headingId) {
+    console.log('Scrolling to heading:', headingId);
     window.postMessage({
         type: 'NAVVRA_SCROLL_TO',
         elementId: headingId
@@ -77,6 +89,7 @@ window.scrollToHeading = function(headingId) {
 };
 
 window.triggerAction = function(actionId) {
+    console.log('Triggering action:', actionId);
     window.postMessage({
         type: 'NAVVRA_TRIGGER_ACTION',
         elementId: actionId

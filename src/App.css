@@ -86,3 +86,22 @@
   color: #60a5fa;
   font-weight: bold;
 }
+
+.clickable {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clickable:hover {
+  background: rgba(59, 130, 246, 0.3) !important;
+}
+
+.action-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 12px;
+  margin: 5px 0;
+  border-radius: 5px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+}
